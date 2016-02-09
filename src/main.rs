@@ -20,8 +20,6 @@ use hyper::header::Connection;
 extern crate serde;
 extern crate serde_json;
 
-use std::ptr;
-
 #[derive(Debug, Copy, Clone)]
 struct Stats {
     connections: i32,
@@ -53,9 +51,11 @@ fn main() {
         loop {
             if let Some(c_stats) = poll_stats(&db) {
                 if let Some(p_stats) = prev_stats {
-                    //post_stats(p_stats, &config);
-                    println!("p_stats: {:?}", prev_stats);
-                    println!("stats: {:?}", c_stats);
+                    let computed_stats = diff_stats(p_stats, c_stats);
+                    post_stats(computed_stats, &config);
+                    println!("computed: {:?}", computed_stats);
+                    //println!("p_stats: {:?}", prev_stats);
+                    //println!("stats: {:?}", c_stats);
                 }
                 prev_stats = Some(c_stats);
             }
@@ -131,8 +131,25 @@ fn poll_stats(db: &Database) -> Option<Stats> {
 }
 
 
-fn diff_stats(before: Stats, after: Stats) {
-
+fn diff_stats(p_stats: Stats, c_stats: Stats) -> Stats {
+    Stats {
+        connections: c_stats.connections,
+        connections_available: c_stats.connections_available,
+        active_r: c_stats.active_r,
+        active_w: c_stats.active_w,
+        inserts: c_stats.inserts - p_stats.inserts,
+        queries: c_stats.queries - p_stats.queries,
+        updates: c_stats.updates - p_stats.updates,
+        deletes: c_stats.deletes - p_stats.deletes,
+        getmores: c_stats.getmores - p_stats.getmores,
+        commands: c_stats.commands - p_stats.commands,
+        page_fault: c_stats.page_fault - p_stats.page_fault,
+        queue_read: c_stats.queue_read,
+        queue_write: c_stats.queue_write,
+        net_in_bytes: c_stats.net_in_bytes - p_stats.net_in_bytes,
+        net_out_bytes: c_stats.net_out_bytes - p_stats.net_out_bytes,
+        idx_miss_ratio: c_stats.idx_miss_ratio,
+    }
 }
 
 fn post_stats(stats: Stats, config: &config::Config){
