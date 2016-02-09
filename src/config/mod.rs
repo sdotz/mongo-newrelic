@@ -21,7 +21,7 @@ pub fn get_config(path: &str) -> Result<Config, io::Error> {
 
 
     let config_toml: toml::Value = s.parse().unwrap();
-    println!("Result: {:?}", config_toml);
+    //println!("Result: {:?}", config_toml);
 
     Ok(
         Config {

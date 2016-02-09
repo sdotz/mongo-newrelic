@@ -20,7 +20,9 @@ use hyper::header::Connection;
 extern crate serde;
 extern crate serde_json;
 
-#[derive(Debug)]
+use std::ptr;
+
+#[derive(Debug, Copy, Clone)]
 struct Stats {
     connections: i32,
     connections_available: i32,
@@ -46,14 +48,20 @@ fn main() {
         let client = connect_db(&config.db_host);
         let db = client.db(&config.db_name);
 
+        let mut prev_stats: Option<Stats> = None;
+
         loop {
-            if let Some(stats) = poll_stats(&db) {
-                post_stats(stats, &config);
+            if let Some(c_stats) = poll_stats(&db) {
+                if let Some(p_stats) = prev_stats {
+                    //post_stats(p_stats, &config);
+                    println!("p_stats: {:?}", prev_stats);
+                    println!("stats: {:?}", c_stats);
+                }
+                prev_stats = Some(c_stats);
             }
             thread::sleep(Duration::new(1, 0));
         }
     };
-
 }
 
 fn connect_db(db_host: &str) -> Client {
@@ -128,7 +136,6 @@ fn diff_stats(before: Stats, after: Stats) {
 }
 
 fn post_stats(stats: Stats, config: &config::Config){
-    println!("stats: {:?}", stats);
 
     let mut client = HyperClient::new();
 
@@ -142,7 +149,5 @@ fn post_stats(stats: Stats, config: &config::Config){
 
     println!("Response: {}", body);
 }
-
-
 
 
