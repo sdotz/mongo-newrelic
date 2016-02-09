@@ -1,0 +1,18 @@
+[package]
+name = "mongo-newrelic"
+version = "0.1.0"
+authors = ["Stephen Dotz <stephen.dotz@nytimes.com>"]
+
+[dependencies]
+bson = "0.1.4"
+mongodb = "0.1.0"
+toml = "0.1"
+hyper = "0.7.2"
+serde = "*"
+serde_json = "*"
+
+
+
+[build-dependencies]
+serde_codegen = "*"
+syntex = "*"
