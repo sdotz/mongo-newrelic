@@ -10,9 +10,5 @@ toml = "0.1"
 hyper = "0.7.2"
 serde = "*"
 serde_json = "*"
+serde_macros = "*"
 
-
-
-[build-dependencies]
-serde_codegen = "*"
-syntex = "*"

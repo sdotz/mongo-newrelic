@@ -1,4 +1,11 @@
+#![feature(custom_derive, plugin)]
+#![plugin(serde_macros)]
+
+extern crate serde;
+extern crate serde_json;
+
 mod config;
+mod newrelic;
 
 #[macro_use(bson, doc)]
 extern crate bson;
@@ -16,12 +23,12 @@ use std::io::Read;
 extern crate hyper;
 use hyper::Client as HyperClient;
 use hyper::header::Connection;
+use hyper::header::{Headers, Accept, ContentType, qitem};
+use hyper::mime::{Mime, TopLevel, SubLevel, Attr, Value};
 
-extern crate serde;
-extern crate serde_json;
 
 #[derive(Debug, Copy, Clone)]
-struct Stats {
+pub struct Stats {
     connections: i32,
     connections_available: i32,
     active_r: i32,
@@ -52,7 +59,8 @@ fn main() {
             if let Some(c_stats) = poll_stats(&db) {
                 if let Some(p_stats) = prev_stats {
                     let computed_stats = diff_stats(p_stats, c_stats);
-                    post_stats(computed_stats, &config);
+                    let body = newrelic::get_newrelic_body_json(&computed_stats, &config);
+                    post_stats(body, &config.newrelic_api_url, &config.newrelic_license_key, &config.plugin_guid);
                     println!("computed: {:?}", computed_stats);
                     //println!("p_stats: {:?}", prev_stats);
                     //println!("stats: {:?}", c_stats);
@@ -82,28 +90,28 @@ fn poll_stats(db: &Database) -> Option<Stats> {
 
     if let Ok(r) = result {
         let connections = r.get_document("connections")
-            .ok()
-            .expect("Could not get connections node");
+        .ok()
+        .expect("Could not get connections node");
 
         let global_lock = r.get_document("globalLock")
-            .ok()
-            .expect("Could not get globalLock node");
+        .ok()
+        .expect("Could not get globalLock node");
 
         let opcounters = r.get_document("opcounters")
-            .ok()
-            .expect("Could not get opcounters node");
+        .ok()
+        .expect("Could not get opcounters node");
 
         let network = r.get_document("network")
-            .ok()
-            .expect("Could not get network node");
+        .ok()
+        .expect("Could not get network node");
 
         let index_counters = r.get_document("indexCounters")
-            .ok()
-            .expect("Could not get network node");
+        .ok()
+        .expect("Could not get network node");
 
         let record_stats = r.get_document("recordStats")
-            .ok()
-            .expect("Could not get recordStats node");
+        .ok()
+        .expect("Could not get recordStats node");
 
         let stats = Stats {
             connections: connections.get_i32("current").unwrap(),
@@ -152,12 +160,33 @@ fn diff_stats(p_stats: Stats, c_stats: Stats) -> Stats {
     }
 }
 
-fn post_stats(stats: Stats, config: &config::Config){
+fn post_stats(payload: String, newrelic_api_url: &str, newrelic_license_key: &str, plugin_guid: &str){
+
+    println!("Payload: {}", payload);
 
     let mut client = HyperClient::new();
 
-    let mut res = client.post(&config.newrelic_api_url)
-    .body("foo=bar")
+    let mut headers = Headers::new();
+    headers.set(
+        Accept(vec![
+            qitem(Mime(TopLevel::Application, SubLevel::Json,
+            vec![(Attr::Charset, Value::Utf8)])),
+        ])
+    );
+
+    headers.set(
+        ContentType(Mime(TopLevel::Application, SubLevel::Json,
+                         vec![(Attr::Charset, Value::Utf8)]))
+    );
+
+    headers.set(
+        ContentType(Mime(TopLevel::Application, SubLevel::Json, vec![]))
+    );
+
+    let mut res = client.post(newrelic_api_url)
+    .headers(headers)
+    .body(&payload)
+    .header()
     .header(Connection::close())
     .send().unwrap();
 
