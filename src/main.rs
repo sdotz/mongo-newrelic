@@ -9,7 +9,6 @@ mod newrelic;
 
 #[macro_use(bson, doc)]
 extern crate bson;
-use bson::Bson;
 
 extern crate mongodb;
 use mongodb::{Client, ThreadedClient};
@@ -20,12 +19,13 @@ use std::thread;
 use std::time::Duration;
 use std::io::Read;
 
-extern crate hyper;
+#[macro_use] extern crate hyper;
 use hyper::Client as HyperClient;
 use hyper::header::Connection;
 use hyper::header::{Headers, Accept, ContentType, qitem};
 use hyper::mime::{Mime, TopLevel, SubLevel, Attr, Value};
 
+header! { (XLicenseKey, "X-License-Key") => [String] }
 
 #[derive(Debug, Copy, Clone)]
 pub struct Stats {
@@ -48,7 +48,7 @@ pub struct Stats {
 }
 
 fn main() {
-    let config_path = "/Users/206637/Documents/mongo-newrelic/config.toml".to_string();
+    let config_path = "/Users/206637/Documents/mongo-newrelic/config.toml".to_owned();
     if let Ok(config) = config::get_config(&config_path) {
         let client = connect_db(&config.db_host);
         let db = client.db(&config.db_name);
@@ -60,14 +60,16 @@ fn main() {
                 if let Some(p_stats) = prev_stats {
                     let computed_stats = diff_stats(p_stats, c_stats);
                     let body = newrelic::get_newrelic_body_json(&computed_stats, &config);
-                    post_stats(body, &config.newrelic_api_url, &config.newrelic_license_key, &config.plugin_guid);
+                    post_stats(body, &config.newrelic_api_url, &config.newrelic_license_key);
                     println!("computed: {:?}", computed_stats);
                     //println!("p_stats: {:?}", prev_stats);
                     //println!("stats: {:?}", c_stats);
                 }
                 prev_stats = Some(c_stats);
             }
-            thread::sleep(Duration::new(1, 0));
+
+            let seconds = config.poll_cadence_secs as u64;
+            thread::sleep(Duration::new(seconds, 0));
         }
     };
 }
@@ -160,11 +162,11 @@ fn diff_stats(p_stats: Stats, c_stats: Stats) -> Stats {
     }
 }
 
-fn post_stats(payload: String, newrelic_api_url: &str, newrelic_license_key: &str, plugin_guid: &str){
+fn post_stats(payload: String, newrelic_api_url: &str, newrelic_license_key: &str){
 
     println!("Payload: {}", payload);
 
-    let mut client = HyperClient::new();
+    let client = HyperClient::new();
 
     let mut headers = Headers::new();
     headers.set(
@@ -183,10 +185,11 @@ fn post_stats(payload: String, newrelic_api_url: &str, newrelic_license_key: &st
         ContentType(Mime(TopLevel::Application, SubLevel::Json, vec![]))
     );
 
+    headers.set(XLicenseKey(newrelic_license_key.to_owned()));
+
     let mut res = client.post(newrelic_api_url)
     .headers(headers)
     .body(&payload)
-    .header()
     .header(Connection::close())
     .send().unwrap();
 

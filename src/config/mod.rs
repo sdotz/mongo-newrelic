@@ -8,7 +8,7 @@ use std::io::prelude::*;
 pub struct Config {
     pub db_host: String,
     pub db_name: String,
-    pub polls_per_sec: f64,
+    pub poll_cadence_secs: i64,
     pub newrelic_api_url: String,
     pub newrelic_license_key: String,
     pub plugin_guid: String,
@@ -25,12 +25,12 @@ pub fn get_config(path: &str) -> Result<Config, io::Error> {
 
     Ok(
         Config {
-            db_host:  config_toml.lookup("db_host").unwrap().as_str().unwrap().to_string(),
-            db_name:  config_toml.lookup("db_name").unwrap().as_str().unwrap().to_string(),
-            polls_per_sec:  config_toml.lookup("polls_per_sec").unwrap().as_float().unwrap(),
-            newrelic_api_url: config_toml.lookup("newrelic_api_url").unwrap().as_str().unwrap().to_string(),
-            newrelic_license_key: config_toml.lookup("newrelic_license_key").unwrap().as_str().unwrap().to_string(),
-            plugin_guid: config_toml.lookup("plugin_guid").unwrap().as_str().unwrap().to_string(),
+            db_host:  config_toml.lookup("db_host").unwrap().as_str().unwrap().to_owned(),
+            db_name:  config_toml.lookup("db_name").unwrap().as_str().unwrap().to_owned(),
+            poll_cadence_secs:  config_toml.lookup("poll_cadence_secs").unwrap().as_integer().unwrap(),
+            newrelic_api_url: config_toml.lookup("newrelic_api_url").unwrap().as_str().unwrap().to_owned(),
+            newrelic_license_key: config_toml.lookup("newrelic_license_key").unwrap().as_str().unwrap().to_owned(),
+            plugin_guid: config_toml.lookup("plugin_guid").unwrap().as_str().unwrap().to_owned(),
         }
     )
 }
