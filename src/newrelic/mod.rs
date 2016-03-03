@@ -26,7 +26,6 @@ struct NewrelicComponent {
     metrics: BTreeMap<String, SerdeValue>,
 }
 
-
 //Use slices for this BTreeMap
 pub fn get_metrics_map(stats: &Stats) -> BTreeMap<String, SerdeValue> {
     let mut stats_map = BTreeMap::new();
@@ -46,7 +45,12 @@ pub fn get_metrics_map(stats: &Stats) -> BTreeMap<String, SerdeValue> {
     stats_map.insert("Component/sys/Queue Write[Count]".to_owned(), value::to_value(&stats.queue_write));
     stats_map.insert("Component/net/Bytes In[Count]".to_owned(), value::to_value(&stats.net_in_bytes));
     stats_map.insert("Component/net/Bytes Out[Count]".to_owned(), value::to_value(&stats.net_out_bytes));
-    stats_map.insert("Component/idx/Inedex Miss Ratio[Count]".to_owned(), value::to_value(&stats.idx_miss_ratio));
+    stats_map.insert("Component/idx/Index Miss Ratio[Count]".to_owned(), value::to_value(&stats.idx_miss_ratio));
+    stats_map.insert("Component/locks/R Locked uSec[Count]".to_owned(), value::to_value(&stats.r_time_locked_micros));
+    stats_map.insert("Component/locks/W Locked uSec[Count]".to_owned(), value::to_value(&stats.w_time_locked_micros));
+    stats_map.insert("Component/locks/W Locked uSec[Count]".to_owned(), value::to_value(&stats.w_time_locked_micros));
+    stats_map.insert("Component/documents/Returned[Count]".to_owned(), value::to_value(&stats.docs_returned));
+    stats_map.insert("Component/documents/Inserted[Count]".to_owned(), value::to_value(&stats.docs_inserted));
 
     return stats_map;
 }

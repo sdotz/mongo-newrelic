@@ -42,9 +42,13 @@ pub struct Stats {
     page_fault: i32,
     queue_read: i32,
     queue_write: i32,
-    net_in_bytes: i32,
-    net_out_bytes: i32,
+    net_in_bytes: f64,
+    net_out_bytes: f64,
     idx_miss_ratio: f64,
+    r_time_locked_micros: i64,
+    w_time_locked_micros: i64,
+    docs_returned: i64,
+    docs_inserted: i64,
 }
 
 fn main() {
@@ -89,12 +93,9 @@ fn connect_db(db_host: &str, db_user: &str, db_pwd: &str) -> Client {
 
 //unwrap() unwraps an option yielding the content of a `Some`
 fn poll_stats(db: &Database) -> Option<Stats> {
-    println!("Poll!");
-
 
     let cmd = doc! { "serverStatus" => 1};
     let result = db.command(cmd, CommandType::Suppressed, None);
-
 
     if let Ok(r) = result {
         println!("{}", r);
@@ -122,6 +123,20 @@ fn poll_stats(db: &Database) -> Option<Stats> {
         .ok()
         .expect("Could not get recordStats node");
 
+        let locks = r.get_document("locks")
+        .ok()
+        .expect("Could not get locks node");
+
+        let locks_for_db = locks.get_document(&db.name).unwrap().get_document("timeLockedMicros")
+        .ok()
+        .expect(
+            &format!("Could not get timeLockedMicros for db {}", &db.name)
+        );
+
+        let doc_metrics = r.get_document("metrics").unwrap().get_document("document")
+        .ok()
+        .expect("Could not get metrics.document");
+
         let stats = Stats {
             connections: connections.get_i32("current").unwrap(),
             connections_available: connections.get_i32("available").unwrap(),
@@ -136,9 +151,13 @@ fn poll_stats(db: &Database) -> Option<Stats> {
             page_fault: record_stats.get_i32("pageFaultExceptionsThrown").unwrap(),
             queue_read: global_lock.get_document("currentQueue").unwrap().get_i32("readers").unwrap(),
             queue_write: global_lock.get_document("currentQueue").unwrap().get_i32("writers").unwrap(),
-            net_in_bytes: network.get_i32("bytesIn").unwrap(),
-            net_out_bytes: network.get_i32("bytesOut").unwrap(),
-            idx_miss_ratio: index_counters.get_f64("missRatio").unwrap()
+            net_in_bytes: network.get_f64("bytesIn").unwrap(),
+            net_out_bytes: network.get_f64("bytesOut").unwrap(),
+            idx_miss_ratio: index_counters.get_f64("missRatio").unwrap(),
+            r_time_locked_micros: locks_for_db.get_i64("r").unwrap(),
+            w_time_locked_micros: locks_for_db.get_i64("w").unwrap(),
+            docs_returned: doc_metrics.get_i64("returned").unwrap(),
+            docs_inserted: doc_metrics.get_i64("inserted").unwrap(),
         };
 
         Some(stats)
@@ -166,6 +185,10 @@ fn diff_stats(p_stats: Stats, c_stats: Stats) -> Stats {
         net_in_bytes: c_stats.net_in_bytes - p_stats.net_in_bytes,
         net_out_bytes: c_stats.net_out_bytes - p_stats.net_out_bytes,
         idx_miss_ratio: c_stats.idx_miss_ratio,
+        r_time_locked_micros: c_stats.r_time_locked_micros - p_stats.r_time_locked_micros,
+        w_time_locked_micros: c_stats.w_time_locked_micros - p_stats.w_time_locked_micros,
+        docs_returned: c_stats.docs_returned - p_stats.docs_returned,
+        docs_inserted: c_stats.docs_inserted - p_stats.docs_inserted,
     }
 }
 
