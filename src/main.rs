@@ -50,8 +50,12 @@ pub struct Stats {
 fn main() {
     let config_path = "/Users/206637/Documents/mongo-newrelic/config.toml".to_owned();
     if let Ok(config) = config::get_config(&config_path) {
-        let client = connect_db(&config.db_host);
-        let db = client.db(&config.db_name);
+        let client = connect_db(&config.db_host, &config.db_user, &config.db_pwd);
+        let db = client.db("admin");
+        match db.auth_cr(&config.db_user, &config.db_pwd) {
+            Ok(k) => println!("Success: {:?}", k),
+            Err(e) => println!("Auth failed: {:?}", e),
+        }
 
         let mut prev_stats: Option<Stats> = None;
 
@@ -74,8 +78,8 @@ fn main() {
     };
 }
 
-fn connect_db(db_host: &str) -> Client {
-    let client = Client::connect(db_host, 27017)
+fn connect_db(db_host: &str, db_user: &str, db_pwd: &str) -> Client {
+    let client = Client::with_uri(db_host)
     .ok()
     .expect("Failed to initialize client.");
 
@@ -86,11 +90,14 @@ fn connect_db(db_host: &str) -> Client {
 //unwrap() unwraps an option yielding the content of a `Some`
 fn poll_stats(db: &Database) -> Option<Stats> {
     println!("Poll!");
-    let cmd = doc! { "serverStatus" => 1 };
 
+
+    let cmd = doc! { "serverStatus" => 1};
     let result = db.command(cmd, CommandType::Suppressed, None);
 
+
     if let Ok(r) = result {
+        println!("{}", r);
         let connections = r.get_document("connections")
         .ok()
         .expect("Could not get connections node");
@@ -177,8 +184,9 @@ fn post_stats(payload: String, newrelic_api_url: &str, newrelic_license_key: &st
     );
 
     headers.set(
-        ContentType(Mime(TopLevel::Application, SubLevel::Json,
-                         vec![(Attr::Charset, Value::Utf8)]))
+        ContentType(
+            Mime(TopLevel::Application, SubLevel::Json, vec![(Attr::Charset, Value::Utf8)])
+        )
     );
 
     headers.set(
