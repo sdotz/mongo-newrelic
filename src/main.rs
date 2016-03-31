@@ -52,7 +52,7 @@ pub struct Stats {
 }
 
 fn main() {
-    let config_path = "/Users/206637/Documents/mongo-newrelic/config.toml".to_owned();
+    let config_path = "/etc/mongo-newrelic/config.toml".to_owned();
     if let Ok(config) = config::get_config(&config_path) {
         let client = connect_db(&config.db_host, &config.db_user, &config.db_pwd);
         let db = client.db("admin");
