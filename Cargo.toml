@@ -5,10 +5,10 @@ authors = ["Stephen Dotz <stephen.dotz@nytimes.com>"]
 
 [dependencies]
 bson = "0.1.4"
-mongodb = "0.1.0"
 toml = "0.1"
 hyper = "0.7.2"
 serde = "*"
 serde_json = "*"
 serde_macros = "*"
+mongodb = {git = "https://github.com/sdotz/mongo-rust-driver-prototype.git", rev = "998312d75106e4d01faf9548237ef298211d1d47"}
 

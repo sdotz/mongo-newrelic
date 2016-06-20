@@ -1,0 +1,9 @@
+db_host = "mongodb://addr:port"
+db_name = ""
+db_user = ""
+db_pwd = ""
+poll_cadence_secs = 5
+newrelic_api_url = "https://platform-api.newrelic.com/platform/v1/metrics"
+newrelic_license_key = ""
+plugin_guid = "com.nytimes.mongostats"
+component_name = "some-db01"
